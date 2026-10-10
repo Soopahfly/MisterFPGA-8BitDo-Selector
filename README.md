@@ -19,6 +19,14 @@ Each included profile contains a main-menu map and an N64 core map. All 12 maps 
 
 These are results from this receiver/controller setup, not a claim that every controller model or firmware behaves the same way. The modified N64 pad pairs in **S Bluetooth mode** while the receiver presents **XInput** to MiSTer. The pad's Bluetooth mode and the receiver's USB output mode are separate settings.
 
+## N64 controller layout
+
+The Xbox and Stadia XInput profiles use the layout shown below. Both triggers are mapped to N64 Z; the right stick supplies the four C buttons.
+
+![N64 XInput controller layouts for Google Stadia and Xbox, with labelled controls and shoulder mappings](docs/images/n64-xinput-layout.png)
+
+[Open the full-size layout sheet](docs/images/n64-xinput-layout.png).
+
 ## Requirements
 
 - MiSTer with Bash and its usual shell utilities.
