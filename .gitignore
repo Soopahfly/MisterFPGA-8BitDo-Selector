@@ -1,0 +1,11 @@
+*.log
+.DS_Store
+Thumbs.db
+__pycache__/
+config/8bitdo-profiles/backup-*/
+config/8bitdo-profiles/installer-backup-*/
+config/8bitdo-profiles/.selector-lock/
+config/8bitdo-profiles/.work-*/
+config/8bitdo-profiles/.install-*/
+config/8bitdo-profiles/last-selected
+config/8bitdo-profiles/last-backup
