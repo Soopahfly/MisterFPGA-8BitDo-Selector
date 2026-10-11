@@ -5,6 +5,12 @@ SOURCE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 DEST=${MISTER_ROOT:-/media/fat}
 SELECTOR=8BitDo_Controller_Selector.sh
 HELPER=Scripts/.8bitdo-selector/controller-menu
+UPDATER=8BitDo_Selector_Update.sh
+if [ "${1:-}" = --program-only ] && [ "$#" -eq 1 ]; then
+    export UPDATE_SOURCE_DIR="$SOURCE"
+    exec bash "$SOURCE/Scripts/$UPDATER" --no-pause
+fi
+[ "$#" -eq 0 ] || { printf 'Usage: install.sh [--program-only]\n' >&2; exit 1; }
 PROFILES="$DEST/config/8bitdo-profiles"
 WORK=
 LOCK=
@@ -18,6 +24,8 @@ trap 'exit 143' HUP TERM
 die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 [ -d "$DEST" ] || die "MiSTer root does not exist: $DEST"
+bash -n "$SOURCE/Scripts/$UPDATER" || die 'Updater syntax check failed.'
+(cd "$SOURCE" && sha256sum -c update/program.sha256) || die 'Program checksum verification failed.'
 bash -n "$SOURCE/Scripts/$SELECTOR" || die 'Selector syntax check failed.'
 [ -f "$SOURCE/$HELPER" ] && [ ! -L "$SOURCE/$HELPER" ] || die 'Missing controller menu helper.'
 (cd "$SOURCE" && sha256sum -c src/controller-menu.sha256) || die 'Controller menu checksum failed.'
@@ -53,6 +61,15 @@ mkdir -p "$DEST/Scripts" "$PROFILES"
 mkdir "$PROFILES/.selector-lock" 2>/dev/null || die 'Selector or another installer is running.'
 LOCK="$PROFILES/.selector-lock"
 WORK=$(mktemp -d "$PROFILES/.install-XXXXXX")
+if [ -e "$DEST/Scripts/$UPDATER" ] || [ -L "$DEST/Scripts/$UPDATER" ]; then
+    [ -f "$DEST/Scripts/$UPDATER" ] && [ ! -L "$DEST/Scripts/$UPDATER" ] || die 'Existing updater is not a regular file.'
+    if ! cmp -s "$SOURCE/Scripts/$UPDATER" "$DEST/Scripts/$UPDATER"; then
+        updater_backup=$(mktemp -d "$PROFILES/updater-backup-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+        cp -p "$DEST/Scripts/$UPDATER" "$updater_backup/"
+    fi
+fi
+cp "$SOURCE/Scripts/$UPDATER" "$WORK/$UPDATER"
+chmod +x "$WORK/$UPDATER"
 cp "$SOURCE/Scripts/$SELECTOR" "$WORK/$SELECTOR"
 chmod +x "$WORK/$SELECTOR"
 cp "$SOURCE/$HELPER" "$WORK/controller-menu"
@@ -85,6 +102,7 @@ done
 mkdir -p "$DEST/Scripts/.8bitdo-selector"
 mv "$WORK/controller-menu" "$DEST/$HELPER"
 mv "$WORK/$SELECTOR" "$DEST/Scripts/$SELECTOR"
+mv "$WORK/$UPDATER" "$DEST/Scripts/$UPDATER"
 sync
 printf 'Installed Switch and XInput profiles for N64, Stadia and Xbox. Active maps are unchanged.\n'
 printf 'Open Scripts > 8BitDo_Controller_Selector, or run:\n'

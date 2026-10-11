@@ -4,7 +4,7 @@ Choose the controller paired with an **8BitDo USB Wireless Adapter 2** and apply
 
 The receiver presents the same USB identity for different paired controllers within a USB output mode. MiSTer therefore shares their mapping filenames. This script asks you to choose the physical controller and installs its main-menu and core maps.
 
-**Version 0.3.0 adds controller navigation for XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
+**Version 0.3.1 adds a program updater and controller navigation for XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
 
 ## Included profiles and test results
 
@@ -58,6 +58,51 @@ config/8bitdo-profiles/xinput/n64/
 config/8bitdo-profiles/xinput/stadia/
 config/8bitdo-profiles/xinput/xbox/
 ```
+
+## Updating the program
+
+After installation, open **Scripts > 8BitDo_Selector_Update**. It downloads the
+latest selector, controller navigation helper and updater from `main`.
+It pins all downloads to one commit, checks their SHA-256 hashes and shell
+syntax, backs up the installed program files, then replaces them. A failed
+or interrupted installation attempts to restore the previous files.
+
+**Updates preserve every saved profile, active map and selector undo record.**
+Customising a bundled profile does not block a program update. Updates do
+not install new profiles or change existing ones. The original full installer
+still checks bundled profile conflicts.
+
+From SSH:
+
+```bash
+bash /media/fat/Scripts/8BitDo_Selector_Update.sh --no-pause
+```
+
+If you have an older version without the updater, download it once to a
+scratch file and run it. The updater installs itself alongside the selector:
+
+```bash
+curl -fL --proto '=https' https://raw.githubusercontent.com/Soopahfly/MisterFPGA-8BitDo-Selector/main/Scripts/8BitDo_Selector_Update.sh -o /tmp/8BitDo_Selector_Update.sh
+bash /tmp/8BitDo_Selector_Update.sh --no-pause
+```
+
+Run the second command only if the download succeeds. Internet access and
+`curl` are required for online updates. There is no background update service.
+Checksums detect download corruption; the package and manifest are obtained
+from the same repository over HTTPS.
+
+For an offline update, download/extract the latest ZIP and run inside its folder:
+
+```bash
+bash install.sh --program-only
+```
+
+This uses the same verified updater without downloading or checking profiles.
+`UPDATE_SOURCE_DIR=/path/to/extracted/project` supplies a local package directly.
+Program backups are stored in `config/8bitdo-profiles/program-backup-*/` with
+paths relative to `/media/fat`. If already current, no new backup is made.
+The updater shares the selector/installer lock. Updates from Scripts can be
+finished with Start on a paired pad, or Enter on a keyboard.
 
 ## Use
 
@@ -140,6 +185,7 @@ An explicit mode conflicting with a single detected mode is rejected. If both id
 - Switch Scripts-menu operation and an Xbox-to-N64 profile switch were tested on MiSTer Multisystem 2 with v0.1.0.
 - All three XInput controllers were configured and tested on the same machine. Xbox rumble worked; N64-mod and Stadia tests did not produce rumble.
 - The v0.2.0 selector passes local file-operation tests for both modes, mode detection, offline menu choice, stale override removal, independent undo, capture, other-device and advanced-map preservation, missing/corrupt profiles, installer conflicts, locks and simulated failure rollback.
+- The updater passes local and mocked HTTPS tests for profile preservation, checksum/download rejection, commit pinning, repeat updates and rollback. Online downloading on MiSTer still needs testing.
 - Controller navigation passes native terminal and input-translation tests, but the bundled ARM helper and physical D-pad/Start operation still need testing on MiSTer. The updated selector still needs a hardware switching test. Portability to a second MiSTer, other cores and PS4 remain untested.
 
 Run the checks on a Linux computer with Bash, Python 3 and GCC (for the native navigation tests):
@@ -147,6 +193,7 @@ Run the checks on a Linux computer with Bash, Python 3 and GCC (for the native n
 ```bash
 python3 tests/test_selector.py
 python3 tests/test_navigation.py
+python3 tests/test_updater.py
 ```
 
 Tests use temporary directories and never write to a real MiSTer configuration.
@@ -157,7 +204,7 @@ To rebuild the bundled helper on a Linux development machine with an ARM hard-fl
 bash src/build.sh
 ```
 
-The default tools are `arm-linux-musleabihf-gcc` and `arm-linux-musleabihf-strip`; override them with `CC` and `STRIP`. `CPPFLAGS` can supply a Linux header path when building a musl wrapper toolchain. The build script updates the binary checksum checked by the installer. The helper source is in `src/controller-menu.c`.
+The default tools are `arm-linux-musleabihf-gcc` and `arm-linux-musleabihf-strip`; override them with `CC` and `STRIP`. `CPPFLAGS` can supply a Linux header path when building a musl wrapper toolchain. The build script updates the binary checksum checked by the installer. After changing any distributed program file, run `bash update/build-manifest.sh` to refresh the updater manifest. The helper source is in `src/controller-menu.c`.
 
 The bundled helper links musl 1.2.4 and GCC 13 runtime code. Their notices are in `src/licenses/`; build details are in `src/BUILD.md`.
 

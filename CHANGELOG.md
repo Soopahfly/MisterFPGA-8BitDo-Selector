@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 - 2026-10-11
+
+- Added a Scripts-menu program updater. Downloads selector, navigation helper and updater from one pinned GitHub commit, verifies checksums and syntax, and backs up/replaces only program files.
+- Saved profiles, active maps and selector undo history remain untouched, including customised bundled profiles. Failed installs attempt rollback; repeat updates do not create extra backups.
+- Offline `install.sh --program-only` option, one-time updater bootstrap instructions, program checksum manifest and updater integration tests.
+
 ## 0.3.0 - 2026-10-11
 
 - D-pad up/down and Start navigation for profile selection, USB mode choice, capture, undo and finishing. Keyboard arrows/Enter/Esc remain available.

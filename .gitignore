@@ -9,3 +9,8 @@ config/8bitdo-profiles/.work-*/
 config/8bitdo-profiles/.install-*/
 config/8bitdo-profiles/last-selected
 config/8bitdo-profiles/last-backup
+
+config/8bitdo-profiles/program-backup-*/
+config/8bitdo-profiles/updater-backup-*/
+config/8bitdo-profiles/helper-backup-*/
+config/8bitdo-profiles/.update-*/

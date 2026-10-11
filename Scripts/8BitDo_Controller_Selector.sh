@@ -1,5 +1,5 @@
 #!/bin/bash
-# 8BitDo Controller Selector v0.3.0 for MiSTer
+# 8BitDo Controller Selector v0.3.1 for MiSTer
 # Install in /media/fat/Scripts/. Existing profiles live in
 # Switch profiles: config/8bitdo-profiles/{n64,stadia,xbox,ps4}/.
 # XInput profiles: config/8bitdo-profiles/xinput/{n64,stadia,xbox,ps4}/.
@@ -186,7 +186,7 @@ restore_backup() {
 }
 status() {
     local p file
-    printf '8BitDo Controller Selector v0.3.0\nReceiver mode: %s (%s)\n' "$MODE" "${IDENTITY/_/:}"
+    printf '8BitDo Controller Selector v0.3.1\nReceiver mode: %s (%s)\n' "$MODE" "${IDENTITY/_/:}"
     printf 'Last selected by this script: '
     if [ -f "$STATE" ]; then cat "$STATE"; else printf 'unknown\n'; fi
     printf '(This is a record, not automatic controller detection.)\n\n'
@@ -248,7 +248,7 @@ menu() {
             items+=("missing|$name (not captured)")
         fi
     done
-    choice=$(nav_pick '8BitDo Controller Selector v0.3.0' "$MODE | Last selected: $last" \
+    choice=$(nav_pick '8BitDo Controller Selector v0.3.1' "$MODE | Last selected: $last" \
         "${items[@]}" 'capture|Capture current maps' 'undo|Undo last switch' 'exit|Exit')
     case "$choice" in
         exit|cancel) return ;;
