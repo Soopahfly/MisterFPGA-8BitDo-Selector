@@ -1,5 +1,5 @@
 #!/bin/bash
-# 8BitDo Controller Selector v0.3.2 for MiSTer
+# 8BitDo Controller Selector v0.3.3 for MiSTer
 # Install in /media/fat/Scripts/. Existing profiles live in
 # Switch profiles: config/8bitdo-profiles/{n64,stadia,xbox,ps4}/.
 # XInput profiles: config/8bitdo-profiles/xinput/{n64,stadia,xbox,ps4}/.
@@ -187,7 +187,7 @@ restore_backup() {
 }
 status() {
     local p file
-    printf '8BitDo Controller Selector v0.3.2\nReceiver mode: %s (%s)\n' "$MODE" "${IDENTITY/_/:}"
+    printf '8BitDo Controller Selector v0.3.3\nReceiver mode: %s (%s)\n' "$MODE" "${IDENTITY/_/:}"
     printf 'Last selected by this script: '
     if [ -f "$STATE" ]; then cat "$STATE"; else printf 'unknown\n'; fi
     printf '(This is a record, not automatic controller detection.)\n\n'
@@ -251,15 +251,40 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT
 trap 'exit 143' HUP TERM
+CA_ARGS=(-q)
 fetch() {
-    curl --proto '=https' --tlsv1.2 --location --fail --silent --show-error \
-        --connect-timeout 15 --max-time 120 --retry 2 "$1" -o "$2"
+    local rc
+    # Ignore .curlrc so menu and SSH updates use the same verified TLS options.
+    if curl "${CA_ARGS[@]}" --proto '=https' --tlsv1.2 --location --fail --silent --show-error \
+        --connect-timeout 15 --max-time 120 --retry 2 "$1" -o "$2"; then
+        return 0
+    else
+        rc=$?
+    fi
+    case "$rc" in
+        60|77)
+            printf '\nCertificate verification failed. Check the MiSTer date and CA bundle.\n' >&2
+            printf 'On a PC, download https://curl.se/ca/cacert.pem and copy it to %s/cacert.pem.\n' "$DEST" >&2
+            printf 'The updater will use that file automatically. No system changes or insecure TLS options are needed.\n' >&2
+            ;;
+    esac
+    return "$rc"
 }
 [ -d "$DEST" ] || die "MiSTer root does not exist: $DEST"
 for command in bash sha256sum mktemp cmp cp mv; do command -v "$command" >/dev/null || die "Missing utility: $command"; done
 # UPDATE_SOURCE_DIR provides a local, verified package for offline updates/tests.
 if [ -z "${UPDATE_SOURCE_DIR:-}" ]; then
     command -v curl >/dev/null || die 'curl is required for online updates.'
+    ca_bundle=${SELECTOR_CA_BUNDLE:-}
+    if [ -z "$ca_bundle" ] && { [ -e "$DEST/cacert.pem" ] || [ -L "$DEST/cacert.pem" ]; }; then
+        ca_bundle="$DEST/cacert.pem"
+    fi
+    if [ -n "$ca_bundle" ]; then
+        [ -f "$ca_bundle" ] && [ -r "$ca_bundle" ] && [ -s "$ca_bundle" ] ||
+            die "CA bundle must be a readable, nonempty regular file: $ca_bundle"
+        CA_ARGS+=(--cacert "$ca_bundle")
+        printf 'Using certificate bundle: %s\n' "$ca_bundle"
+    fi
 fi
 [ ! -L "$DEST/Scripts" ] && [ ! -L "$DEST/Scripts/.8bitdo-selector" ] || die 'Program directories must not be symlinks.'
 for directory in "$DEST/Scripts" "$DEST/Scripts/.8bitdo-selector" "$PROFILE_ROOT"; do
@@ -391,7 +416,7 @@ menu() {
             items+=("missing|$name (not captured)")
         fi
     done
-    choice=$(nav_pick '8BitDo Controller Selector v0.3.2' "$MODE | Last selected: $last" \
+    choice=$(nav_pick '8BitDo Controller Selector v0.3.3' "$MODE | Last selected: $last" \
         "${items[@]}" 'capture|Capture current maps' 'undo|Undo last switch' 'update|Update selector' 'exit|Exit')
     case "$choice" in
         exit|cancel) return ;;

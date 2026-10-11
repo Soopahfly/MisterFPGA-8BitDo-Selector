@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.3 - 2026-10-11
+
+- Online updates explicitly use `/media/fat/cacert.pem` when supplied, or `SELECTOR_CA_BUNDLE` for a custom path. Without a supplied bundle, curl uses its normal CA store/environment settings.
+- Ignore `.curlrc` during downloads, keep TLS verification enabled, and explain curl certificate errors without modifying the system or downloading trust material insecurely.
+- Added regression tests for bundle selection, default CA handling, invalid bundles, TLS failure preservation and offline updates. Updated the program manifest and certificate setup documentation.
+
 ## Profile pack update - 2026-10-11
 
 - Added captured DualShock 4 XInput global and N64 maps. Menu navigation, N64 buttons/sticks and physical N64 rumble were tested on MiSTer. Both files match the tested Stadia profile byte-for-byte.

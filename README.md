@@ -4,7 +4,7 @@ Choose the controller paired with an **8BitDo USB Wireless Adapter 2** and apply
 
 The receiver presents the same USB identity for different paired controllers within a USB output mode. MiSTer therefore shares their mapping filenames. This script asks you to choose the physical controller and installs its main-menu and core maps.
 
-**Version 0.3.2 has controller navigation and Update selector in one main Scripts entry, with XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
+**Version 0.3.3 has controller navigation and Update selector in one main Scripts entry, with XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
 
 ## Included profiles and test results
 
@@ -118,6 +118,40 @@ paths relative to `/media/fat`. If already current, no new backup is made.
 The built-in updater shares the selector/installer lock. Updates from Scripts can be
 finished with Start on a paired pad, or Enter on a keyboard.
 
+### Certificate errors (curl 60 or 77)
+
+The updater automatically uses a readable, nonempty `/media/fat/cacert.pem` when present.
+Download the [Mozilla CA bundle](https://curl.se/ca/cacert.pem) on a PC,
+save it as `cacert.pem`, and copy it into `\\mister\sdcard\` using SMB
+(or into `/media/fat/` using SFTP). Keep the file there for future updates.
+
+The updater passes this bundle explicitly to curl for every download and
+ignores `~/.curlrc`, so SSH and Scripts-menu updates use the same TLS options.
+There is no need to edit system certificates or curl configuration.
+If the bundle is absent, curl uses its normal CA store and supported environment settings.
+An invalid supplied bundle fails the update; verification is never disabled.
+Check the MiSTer clock too if verification fails with a current bundle.
+
+To use another trusted bundle over SSH:
+
+```bash
+SELECTOR_CA_BUNDLE=/path/to/cacert.pem \
+bash /media/fat/Scripts/8BitDo_Controller_Selector.sh update --no-pause
+```
+
+For an older installed selector, use this one-time verified bootstrap:
+
+```bash
+curl -q --cacert /media/fat/cacert.pem -fL --proto '=https' \
+  https://raw.githubusercontent.com/Soopahfly/MisterFPGA-8BitDo-Selector/main/Scripts/8BitDo_Controller_Selector.sh \
+  -o /tmp/8BitDo_Controller_Selector.sh &&
+bash /tmp/8BitDo_Controller_Selector.sh update --no-pause
+```
+
+The bundle must come from a trusted download on another device; the selector
+does not fetch or replace CA certificates. If HTTPS remains unavailable, use
+the offline program-only installation described above.
+
 ## Use
 
 1. Pair your controller and open **Scripts > 8BitDo_Controller_Selector**, or run:
@@ -206,7 +240,7 @@ An explicit mode conflicting with a single detected mode is rejected. If both id
 - Switch Scripts-menu operation and an Xbox-to-N64 profile switch were tested on MiSTer Multisystem 2 with v0.1.0.
 - All four XInput controllers were configured and tested on the same machine. Xbox and DualShock 4 rumble worked in N64; N64-mod and Stadia tests did not produce rumble.
 - Current selector checks cover both USB modes, detection, offline menus, stale override removal, independent undo, capture, preservation of other-device/advanced maps, missing/corrupt profiles, installer conflicts, locks and simulated failure rollback.
-- The built-in updater passes local/mocked HTTPS tests for profile preservation, checksum/download rejection, commit pinning, repeat updates, rollback and v0.3.1 migration. Real GitHub downloads and legacy-entry backup/removal were also checked on a development machine. Online downloading on MiSTer still needs testing.
+- The built-in updater passes local/mocked HTTPS tests for profile preservation, checksum/download rejection, commit pinning, repeat updates, rollback and v0.3.1 migration. Real GitHub downloads and legacy-entry backup/removal were also checked on a development machine. Online checking was confirmed on MiSTer with a supplied CA bundle and v0.3.2. The v0.3.3 automatic-bundle change still needs its hardware update test.
 - Controller navigation passes native terminal and input-translation tests, but the bundled ARM helper and physical D-pad/Start operation still need testing on MiSTer. The updated selector still needs a hardware switching test. Portability to a second MiSTer and other cores remain untested. DS4 profile switching and controller-menu navigation still need a hardware test.
 
 Run the checks on a Linux computer with Bash, Python 3 and GCC (for the native navigation tests):

@@ -138,6 +138,8 @@ exec "REAL_MV" "$@"
 import json,os,pathlib,sys
 args=sys.argv[1:]; url=args[-3]; dest=pathlib.Path(args[-1])
 with open(os.environ['URL_LOG'],'a') as log: log.write(url+'\\n')
+with open(os.environ['URL_LOG']+'.args','a') as log: log.write(json.dumps(args)+'\\n')
+if os.environ.get('FAKE_TLS_ERROR'): sys.exit(int(os.environ['FAKE_TLS_ERROR']))
 sha='a'*40
 if url.startswith('https://api.github.com/'):
     dest.write_text(json.dumps({'object':{'sha':sha}}));sys.exit(0)
@@ -162,5 +164,63 @@ dest.write_bytes((pathlib.Path(os.environ['FAKE_SOURCE'])/name).read_bytes())
         before={name:(self.root/name).read_bytes() for name in FILES}
         self.assertIn('Download failed',self.update(False,self.network(True)).stderr)
         self.assertEqual(before,{name:(self.root/name).read_bytes() for name in FILES})
+
+    def curl_calls(self):
+        import json
+        return [json.loads(line) for line in
+                (self.base/'urls.args').read_text().splitlines()]
+
+    def test_default_ca_store_and_no_curlrc(self):
+        self.update(env=self.network())
+        calls=self.curl_calls()
+        self.assertEqual(len(calls),5)
+        for args in calls:
+            self.assertEqual(args[0],'-q')
+            self.assertNotIn('--cacert',args)
+            self.assertNotIn('--insecure',args)
+            self.assertNotIn('-k',args)
+
+    def test_local_bundle_is_used_for_every_download(self):
+        bundle=self.root/'cacert.pem'
+        bundle.write_text('mock CA bundle for argument checks\n')
+        result=self.update(env=self.network())
+        self.assertIn('Using certificate bundle: '+str(bundle),result.stdout)
+        calls=self.curl_calls()
+        self.assertEqual(len(calls),5)
+        for args in calls:
+            self.assertEqual(args[0],'-q')
+            self.assertEqual(args[args.index('--cacert')+1],str(bundle))
+            self.assertNotIn('--insecure',args)
+        self.assertEqual(bundle.read_text(),'mock CA bundle for argument checks\n')
+
+    def test_explicit_bundle_overrides_local_bundle(self):
+        (self.root/'cacert.pem').write_text('default mock bundle\n')
+        bundle=self.base/'custom bundle.pem'
+        bundle.write_text('custom mock bundle\n')
+        self.update(env=self.network()|{'SELECTOR_CA_BUNDLE':str(bundle)})
+        for args in self.curl_calls():
+            self.assertEqual(args[args.index('--cacert')+1],str(bundle))
+
+    def test_invalid_bundle_stops_before_downloading_or_replacing(self):
+        (self.root/'cacert.pem').mkdir()
+        before={name:(self.root/name).read_bytes() for name in FILES}
+        result=self.update(False,self.network())
+        self.assertIn('CA bundle must be a readable, nonempty regular file',result.stderr)
+        self.assertFalse((self.base/'urls').exists())
+        self.assertEqual(before,{name:(self.root/name).read_bytes() for name in FILES})
+
+    def test_tls_failure_explains_fix_and_never_retries_insecurely(self):
+        before={name:(self.root/name).read_bytes() for name in FILES}
+        result=self.update(False,self.network()|{'FAKE_TLS_ERROR':'60'})
+        self.assertIn('Certificate verification failed',result.stderr)
+        self.assertIn('https://curl.se/ca/cacert.pem',result.stderr)
+        calls=self.curl_calls()
+        self.assertEqual(len(calls),1)
+        self.assertNotIn('--insecure',calls[0])
+        self.assertEqual(before,{name:(self.root/name).read_bytes() for name in FILES})
+
+    def test_offline_update_does_not_require_valid_ca_bundle(self):
+        (self.root/'cacert.pem').mkdir()
+        self.update()
 
 if __name__=='__main__': unittest.main()
