@@ -38,7 +38,7 @@ if [ -e "$DEST/$HELPER" ]; then
 fi
 
 # Check every source and existing profile before changing files.
-for p in n64 stadia xbox xinput/n64 xinput/stadia xinput/xbox; do
+for p in n64 stadia xbox xinput/n64 xinput/stadia xinput/xbox xinput/ps4; do
     case "$p" in xinput/*) identity=2dc8_3106 ;; *) identity=057e_2009 ;; esac
     directory="$SOURCE/config/8bitdo-profiles/$p"
     for name in "input_${identity}_v3.map" "N64_input_${identity}_v3.map"; do
@@ -85,7 +85,7 @@ if [ -e "$DEST/Scripts/$SELECTOR" ]; then
         printf 'Previous selector backed up: %s\n' "$backup"
     fi
 fi
-for p in n64 stadia xbox xinput/n64 xinput/stadia xinput/xbox; do
+for p in n64 stadia xbox xinput/n64 xinput/stadia xinput/xbox xinput/ps4; do
     case "$p" in xinput/*) identity=2dc8_3106 ;; *) identity=057e_2009 ;; esac
     mkdir -p "$PROFILES/$p"
     for file in "$SOURCE/config/8bitdo-profiles/$p"/*input_${identity}_v3.map; do
@@ -102,6 +102,6 @@ mv "$WORK/controller-menu" "$DEST/$HELPER"
 mv "$WORK/$SELECTOR" "$DEST/Scripts/$SELECTOR"
 rm -f -- "$DEST/Scripts/$UPDATER"
 sync
-printf 'Installed Switch and XInput profiles for N64, Stadia and Xbox. Active maps are unchanged.\n'
+printf 'Installed Switch profiles for N64, Stadia and Xbox, and XInput profiles for N64, Stadia, Xbox and PS4. Active maps are unchanged.\n'
 printf 'Open Scripts > 8BitDo_Controller_Selector, or run:\n'
 printf 'bash %s/Scripts/%s\n' "$DEST" "$SELECTOR"

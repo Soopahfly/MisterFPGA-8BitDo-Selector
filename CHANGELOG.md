@@ -1,5 +1,10 @@
 # Changelog
 
+## Profile pack update - 2026-10-11
+
+- Added captured DualShock 4 XInput global and N64 maps. Menu navigation, N64 buttons/sticks and physical N64 rumble were tested on MiSTer. Both files match the tested Stadia profile byte-for-byte.
+- Full installation now includes the PS4 XInput profile. Program-only updates continue to preserve profiles and do not download new bundled maps.
+
 ## 0.3.2 - 2026-10-11
 
 - Documentation clarifies first installation versus program-only updates, migration and actual test coverage. Added profile-contribution instructions and a researched other-core mapping guide.

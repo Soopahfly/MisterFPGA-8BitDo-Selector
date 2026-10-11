@@ -8,14 +8,14 @@ The receiver presents the same USB identity for different paired controllers wit
 
 ## Included profiles and test results
 
-Each included profile contains a main-menu map and an N64 core map. All 12 maps are actual 128-byte MiSTer v3 files captured on a MiSTer Multisystem 2.
+Each included profile contains a main-menu map and an N64 core map. All 14 maps are actual 128-byte MiSTer v3 files captured on a MiSTer Multisystem 2.
 
 | Controller | Switch maps (`057e:2009`) | XInput maps (`2dc8:3106`) | XInput rumble in this setup |
 | --- | --- | --- | --- |
 | N64 controller with 8BitDo Bluetooth mod | Included | Included, controls tested | No response to CLI strong/weak rumble tests |
 | Google Stadia | Included | Included, controls tested | No rumble observed in the core test |
 | Xbox | Included | Included, controls tested | Working in the N64 core |
-| PS4 | Not captured | Not captured | Not tested |
+| PS4 DualShock 4 | Not captured | Included, menu and N64 controls tested | Working in the N64 core |
 
 These are results from this receiver/controller setup, not a claim that every controller model or firmware behaves the same way. The modified N64 pad pairs in **S Bluetooth mode** while the receiver presents **XInput** to MiSTer. The pad's Bluetooth mode and the receiver's USB output mode are separate settings.
 
@@ -26,6 +26,8 @@ The Xbox and Stadia XInput profiles use the layout shown below. Both triggers ar
 ![N64 XInput controller layouts for Google Stadia and Xbox, with labelled controls and shoulder mappings](docs/images/n64-xinput-layout.png)
 
 [Open the full-size layout sheet](docs/images/n64-xinput-layout.png).
+
+The tested DS4 XInput profile uses the same map bytes as Stadia: Cross = N64 A, Square = N64 B, L2/R2 = Z, L1/R1 = L/R, left stick = analog, right stick = C directions, and Options = Start. The sheet above illustrates Xbox and Stadia only.
 
 ## Requirements
 
@@ -59,6 +61,7 @@ config/8bitdo-profiles/xbox/
 config/8bitdo-profiles/xinput/n64/
 config/8bitdo-profiles/xinput/stadia/
 config/8bitdo-profiles/xinput/xbox/
+config/8bitdo-profiles/xinput/ps4/
 ```
 
 ## Updating the program
@@ -124,7 +127,7 @@ bash /media/fat/Scripts/8BitDo_Controller_Selector.sh
 ```
 
 2. The script detects the receiver's USB mode from its gamepad input. If disconnected or ambiguous, choose the mode matching the adapter's USB output.
-3. Use **D-pad up/down** to highlight **N64**, **Stadia** or **Xbox**, then press **Start**. Keyboard arrows and Enter also work. Choose Exit to cancel, or press Esc on the keyboard.
+3. Use **D-pad up/down** to highlight **N64**, **Stadia**, **Xbox** or **PS4**, then press **Start**. Keyboard arrows and Enter also work. Choose Exit to cancel, or press Esc on the keyboard.
 4. Exit the script, turn the controller off and reconnect it. Press a button in the core to assign the player, if needed.
 
 You can also select a profile before pairing. Choosing a mode in this script selects saved mapping files; it does **not** change the adapter's hardware mode.
@@ -158,7 +161,7 @@ If a core needs changes:
 
 Capture saves the active standard global/core v3 maps for the selected USB mode and backs up the previous profile. Make sure the correct profile is active before remapping, otherwise another controller's core maps could be captured with it. Capture does not change the active maps or the undo pointer.
 
-PS4 can be added when a pad is available for configuration and testing. Until then, selecting PS4 reports a missing profile and leaves active maps alone.
+The included DualShock 4 profile is for XInput only. Its global and N64 maps are byte-for-byte identical to the Stadia profile, and menu controls, N64 buttons/sticks and physical rumble were verified with the DS4 paired. No PS4 Switch-mode profile has been captured.
 
 For the main menu's SNES-style button prompts, Stadia/Xbox physical positions are: MiSTer B = physical A, A = B, Y = X, X = Y. Core-specific mappings are configured separately.
 
@@ -201,10 +204,10 @@ An explicit mode conflicting with a single detected mode is rejected. If both id
 ## Validation and limits
 
 - Switch Scripts-menu operation and an Xbox-to-N64 profile switch were tested on MiSTer Multisystem 2 with v0.1.0.
-- All three XInput controllers were configured and tested on the same machine. Xbox rumble worked; N64-mod and Stadia tests did not produce rumble.
+- All four XInput controllers were configured and tested on the same machine. Xbox and DualShock 4 rumble worked in N64; N64-mod and Stadia tests did not produce rumble.
 - Current selector checks cover both USB modes, detection, offline menus, stale override removal, independent undo, capture, preservation of other-device/advanced maps, missing/corrupt profiles, installer conflicts, locks and simulated failure rollback.
 - The built-in updater passes local/mocked HTTPS tests for profile preservation, checksum/download rejection, commit pinning, repeat updates, rollback and v0.3.1 migration. Real GitHub downloads and legacy-entry backup/removal were also checked on a development machine. Online downloading on MiSTer still needs testing.
-- Controller navigation passes native terminal and input-translation tests, but the bundled ARM helper and physical D-pad/Start operation still need testing on MiSTer. The updated selector still needs a hardware switching test. Portability to a second MiSTer, other cores and PS4 remain untested.
+- Controller navigation passes native terminal and input-translation tests, but the bundled ARM helper and physical D-pad/Start operation still need testing on MiSTer. The updated selector still needs a hardware switching test. Portability to a second MiSTer and other cores remain untested. DS4 profile switching and controller-menu navigation still need a hardware test.
 
 Run the checks on a Linux computer with Bash, Python 3 and GCC (for the native navigation tests):
 
@@ -229,7 +232,7 @@ The bundled helper links musl 1.2.4 and GCC 13 runtime code. Their notices are i
 ## Planned improvements
 
 - A selection prompt when the receiver's gamepad input appears. Integration with MiSTer's display and input handling still needs investigation.
-- PS4 mappings, more core mappings and a second-MiSTer portability test.
+- More core mappings, PS4 Switch-mode mappings and a second-MiSTer portability test.
 
 ## Reporting a problem
 
