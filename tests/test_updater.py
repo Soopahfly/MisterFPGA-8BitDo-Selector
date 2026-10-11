@@ -7,8 +7,9 @@ import tempfile
 import unittest
 
 PROJECT=Path(__file__).resolve().parents[1]
-FILES=('Scripts/8BitDo_Controller_Selector.sh', 'Scripts/8BitDo_Selector_Update.sh',
-       'Scripts/.8bitdo-selector/controller-menu')
+FILES=('Scripts/8BitDo_Controller_Selector.sh', 'Scripts/.8bitdo-selector/controller-menu')
+LEGACY='Scripts/8BitDo_Selector_Update.sh'
+PACKAGE_FILES=FILES+(LEGACY,)
 
 class UpdaterTests(unittest.TestCase):
     def setUp(self):
@@ -34,8 +35,8 @@ class UpdaterTests(unittest.TestCase):
         self.env=os.environ|{'MISTER_ROOT':str(self.root),'UPDATE_SOURCE_DIR':str(PROJECT)}
 
     def update(self, success=True, env=None, installer=False):
-        args=['bash',str(PROJECT/('install.sh' if installer else FILES[1])),
-              '--program-only' if installer else '--no-pause']
+        args=['bash',str(PROJECT/('install.sh' if installer else FILES[0]))]
+        args+=['--program-only'] if installer else ['update','--no-pause']
         result=subprocess.run(args,env=self.env|(env or {}),capture_output=True,text=True)
         self.assertEqual(result.returncode==0,success,result.stdout+result.stderr)
         for name,data in self.snapshot.items():
@@ -62,7 +63,7 @@ class UpdaterTests(unittest.TestCase):
         lock=self.root/'config/8bitdo-profiles/.selector-lock'
         lock.mkdir()
         before={name:(self.root/name).read_bytes() for name in FILES}
-        result=subprocess.run(['bash',str(PROJECT/FILES[1]),'--no-pause'],
+        result=subprocess.run(['bash',str(PROJECT/FILES[0]),'update','--no-pause'],
                               env=self.env,capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn('another updater is running',result.stderr)
@@ -71,7 +72,7 @@ class UpdaterTests(unittest.TestCase):
 
     def fixture(self):
         source=self.base/'source'
-        for name in FILES+('update/program.sha256',):
+        for name in PACKAGE_FILES+('update/program.sha256',):
             (source/name).parent.mkdir(parents=True,exist_ok=True)
             shutil.copyfile(PROJECT/name,source/name)
         return source
@@ -89,8 +90,8 @@ class UpdaterTests(unittest.TestCase):
         self.assertIn('Unexpected file',self.update(False,{'UPDATE_SOURCE_DIR':str(source)}).stderr)
 
     def test_write_failure_restores_all_programs_and_missing_helper(self):
-        (self.root/FILES[2]).unlink()
-        before={name:(self.root/name).read_bytes() for name in FILES[:2]}
+        (self.root/FILES[1]).unlink()
+        before={name:(self.root/name).read_bytes() for name in FILES[:1]}
         bindir=self.base/'bin';bindir.mkdir()
         real_mv=shutil.which('mv')
         fake=bindir/'mv'
@@ -106,8 +107,29 @@ exec "REAL_MV" "$@"
         result=self.update(False,{'PATH':str(bindir)+':'+os.environ['PATH'],
                                   'FAIL_COUNTER':str(self.base/'count')})
         self.assertIn('Restoring previous program',result.stderr)
-        self.assertEqual(before,{name:(self.root/name).read_bytes() for name in FILES[:2]})
-        self.assertFalse((self.root/FILES[2]).exists())
+        self.assertEqual(before,{name:(self.root/name).read_bytes() for name in FILES[:1]})
+        self.assertFalse((self.root/FILES[1]).exists())
+
+    def test_v031_updater_can_migrate_through_compatibility_bridge(self):
+        old=(PROJECT/'tests/fixtures/updater-v0.3.1.sh').read_bytes()
+        legacy=self.root/LEGACY
+        legacy.write_bytes(old)
+        first=subprocess.run(['bash',str(legacy),'--no-pause'],env=self.env,capture_output=True,text=True)
+        self.assertEqual(first.returncode,0,first.stdout+first.stderr)
+        self.assertTrue(legacy.exists())
+        self.assertEqual(legacy.read_bytes(),(PROJECT/LEGACY).read_bytes())
+        second=subprocess.run(['bash',str(legacy),'--no-pause'],env=self.env,capture_output=True,text=True)
+        self.assertEqual(second.returncode,0,second.stdout+second.stderr)
+        self.assertFalse(legacy.exists())
+        for name,data in self.snapshot.items(): self.assertEqual((self.root/name).read_bytes(),data)
+
+    def test_legacy_updater_is_backed_up_and_removed(self):
+        legacy=self.root/LEGACY
+        legacy.write_text('#!/bin/bash\nprintf "legacy updater\n"\n')
+        self.update()
+        self.assertFalse(legacy.exists())
+        backups=list((self.root/'config/8bitdo-profiles').glob('program-backup-*'))
+        self.assertEqual((backups[0]/LEGACY).read_text(),'#!/bin/bash\nprintf "legacy updater\n"\n')
 
     def network(self, fail=False):
         bindir=self.base/'network';bindir.mkdir()

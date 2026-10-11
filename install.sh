@@ -8,7 +8,7 @@ HELPER=Scripts/.8bitdo-selector/controller-menu
 UPDATER=8BitDo_Selector_Update.sh
 if [ "${1:-}" = --program-only ] && [ "$#" -eq 1 ]; then
     export UPDATE_SOURCE_DIR="$SOURCE"
-    exec bash "$SOURCE/Scripts/$UPDATER" --no-pause
+    exec bash "$SOURCE/Scripts/$SELECTOR" update --no-pause
 fi
 [ "$#" -eq 0 ] || { printf 'Usage: install.sh [--program-only]\n' >&2; exit 1; }
 PROFILES="$DEST/config/8bitdo-profiles"
@@ -68,8 +68,6 @@ if [ -e "$DEST/Scripts/$UPDATER" ] || [ -L "$DEST/Scripts/$UPDATER" ]; then
         cp -p "$DEST/Scripts/$UPDATER" "$updater_backup/"
     fi
 fi
-cp "$SOURCE/Scripts/$UPDATER" "$WORK/$UPDATER"
-chmod +x "$WORK/$UPDATER"
 cp "$SOURCE/Scripts/$SELECTOR" "$WORK/$SELECTOR"
 chmod +x "$WORK/$SELECTOR"
 cp "$SOURCE/$HELPER" "$WORK/controller-menu"
@@ -102,7 +100,7 @@ done
 mkdir -p "$DEST/Scripts/.8bitdo-selector"
 mv "$WORK/controller-menu" "$DEST/$HELPER"
 mv "$WORK/$SELECTOR" "$DEST/Scripts/$SELECTOR"
-mv "$WORK/$UPDATER" "$DEST/Scripts/$UPDATER"
+rm -f -- "$DEST/Scripts/$UPDATER"
 sync
 printf 'Installed Switch and XInput profiles for N64, Stadia and Xbox. Active maps are unchanged.\n'
 printf 'Open Scripts > 8BitDo_Controller_Selector, or run:\n'

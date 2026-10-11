@@ -110,6 +110,24 @@ class NavigationTests(unittest.TestCase):
             self.assertEqual(p.returncode,0)
             self.assertEqual(before,{str(p.relative_to(root)):p.read_bytes() for p in root.rglob('*.map')})
 
+    def test_offline_mode_menu_can_update_without_choosing_receiver_mode(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root=Path(temporary)
+            subprocess.run(['bash',str(PROJECT/'install.sh')],
+                           env=os.environ|{'MISTER_ROOT':str(root)},capture_output=True,check=True)
+            env=os.environ|{'MISTER_ROOT':str(root),'CONFIG_ROOT':str(root/'config'),
+                            'NAV_HELPER':str(self.binary),'RECEIVER_MODE':'auto',
+                            'INPUT_DEVICES':'/dev/null','UPDATE_SOURCE_DIR':str(PROJECT)}
+            p,master,_,_=self.start(['bash',str(PROJECT/'Scripts/8BitDo_Controller_Selector.sh')],env,False)
+            self.screen(master,b'Choose receiver USB mode')
+            os.write(master,b'\x1b[B\x1b[B\r')
+            self.screen(master,b'Press Enter to finish:')
+            os.write(master,b'\r')
+            p.wait(timeout=5)
+            self.assertEqual(p.returncode,0)
+            self.assertFalse((root/'config/8bitdo-profiles/last-selected').exists())
+            self.assertFalse((root/'Scripts/8BitDo_Selector_Update.sh').exists())
+
     def test_evdev_actions_and_held_buttons(self):
         source=Path(self.temp.name)/'events.c'
         source.write_text(r'''

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.2 - 2026-10-11
+
+- Moved the complete updater into the main selector. Added Update selector to controller and numbered keyboard menus, the offline mode screen, and the `update [--no-pause]` command.
+- Fresh installs no longer create a separate updater entry. Built-in updates back up and remove an existing legacy updater, while a repository compatibility bridge lets v0.3.1 users upgrade.
+- Profile preservation, verified downloads, shared locking, backup and rollback remain supported. Added menu and legacy-removal tests.
+
 ## 0.3.1 - 2026-10-11
 
 - Added a Scripts-menu program updater. Downloads selector, navigation helper and updater from one pinned GitHub commit, verifies checksums and syntax, and backs up/replaces only program files.

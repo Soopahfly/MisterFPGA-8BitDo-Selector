@@ -4,7 +4,7 @@ Choose the controller paired with an **8BitDo USB Wireless Adapter 2** and apply
 
 The receiver presents the same USB identity for different paired controllers within a USB output mode. MiSTer therefore shares their mapping filenames. This script asks you to choose the physical controller and installs its main-menu and core maps.
 
-**Version 0.3.1 adds a program updater and controller navigation for XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
+**Version 0.3.2 adds a program updater and controller navigation for XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
 
 ## Included profiles and test results
 
@@ -61,8 +61,10 @@ config/8bitdo-profiles/xinput/xbox/
 
 ## Updating the program
 
-After installation, open **Scripts > 8BitDo_Selector_Update**. It downloads the
-latest selector, controller navigation helper and updater from `main`.
+Open **Scripts > 8BitDo_Controller_Selector**, then choose **Update selector**.
+Use D-pad up/down and Start, or option **7** in the numbered keyboard menu.
+It downloads the latest selector and controller navigation helper from `main`.
+Updating also works from the offline USB-mode screen, without choosing a mode.
 It pins all downloads to one commit, checks their SHA-256 hashes and shell
 syntax, backs up the installed program files, then replaces them. A failed
 or interrupted installation attempts to restore the previous files.
@@ -75,19 +77,26 @@ still checks bundled profile conflicts.
 From SSH:
 
 ```bash
-bash /media/fat/Scripts/8BitDo_Selector_Update.sh --no-pause
+bash /media/fat/Scripts/8BitDo_Controller_Selector.sh update --no-pause
 ```
 
-If you have an older version without the updater, download it once to a
-scratch file and run it. The updater installs itself alongside the selector:
+If you already installed v0.3.1, run its existing updater once to get this
+version. The old updater entry is removed on the next built-in update
+(or when the compatibility entry is run again). Its files are backed up.
+New installations show only the main selector in Scripts.
+
+For older versions without any updater, download the main script to a
+scratch file and run its update command:
 
 ```bash
-curl -fL --proto '=https' https://raw.githubusercontent.com/Soopahfly/MisterFPGA-8BitDo-Selector/main/Scripts/8BitDo_Selector_Update.sh -o /tmp/8BitDo_Selector_Update.sh
-bash /tmp/8BitDo_Selector_Update.sh --no-pause
+curl -fL --proto '=https' https://raw.githubusercontent.com/Soopahfly/MisterFPGA-8BitDo-Selector/main/Scripts/8BitDo_Controller_Selector.sh -o /tmp/8BitDo_Controller_Selector.sh
+bash /tmp/8BitDo_Controller_Selector.sh update --no-pause
 ```
 
 Run the second command only if the download succeeds. Internet access and
 `curl` are required for online updates. There is no background update service.
+The repository retains a small compatibility bridge for old updaters. It is
+verified during downloads but not installed by the built-in updater.
 Checksums detect download corruption; the package and manifest are obtained
 from the same repository over HTTPS.
 
@@ -101,7 +110,7 @@ This uses the same verified updater without downloading or checking profiles.
 `UPDATE_SOURCE_DIR=/path/to/extracted/project` supplies a local package directly.
 Program backups are stored in `config/8bitdo-profiles/program-backup-*/` with
 paths relative to `/media/fat`. If already current, no new backup is made.
-The updater shares the selector/installer lock. Updates from Scripts can be
+The built-in updater shares the selector/installer lock. Updates from Scripts can be
 finished with Start on a paired pad, or Enter on a keyboard.
 
 ## Use
