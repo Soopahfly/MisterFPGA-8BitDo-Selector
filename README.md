@@ -4,7 +4,7 @@ Choose the controller paired with an **8BitDo USB Wireless Adapter 2** and apply
 
 The receiver presents the same USB identity for different paired controllers within a USB output mode. MiSTer therefore shares their mapping filenames. This script asks you to choose the physical controller and installs its main-menu and core maps.
 
-**Version 0.3.2 adds a program updater and controller navigation for XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
+**Version 0.3.2 has controller navigation and Update selector in one main Scripts entry, with XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
 
 ## Included profiles and test results
 
@@ -36,7 +36,7 @@ The Xbox and Stadia XInput profiles use the layout shown below. Both triggers ar
 
 Switch and XInput profiles use different input layouts. **Do not rename a Switch map to make it an XInput map.** Configure and capture each mode separately.
 
-## Install or update
+## First installation
 
 1. Download this repository using GitHub's **Code > Download ZIP**.
 2. Extract it and copy the project folder to MiSTer using WinSCP or another file transfer tool.
@@ -47,6 +47,8 @@ bash install.sh
 ```
 
 The installer copies the selector and its bundled ARM helper into `/media/fat/Scripts/` and profiles into `/media/fat/config/8bitdo-profiles/`. It preserves active maps and backs up an existing different selector before replacing it. It checks all bundled profiles first and stops if an existing bundled map differs. Preserve or move the conflicting map before retrying; custom additional core maps are retained.
+
+For an existing installation with customised profiles, use **Update selector** or `bash install.sh --program-only` instead of the full installer. The program-only update does not need those profiles to match the bundled copies.
 
 Existing v0.1.0 Switch profiles stay in their original directories. XInput profiles are installed separately:
 
@@ -93,7 +95,7 @@ curl -fL --proto '=https' https://raw.githubusercontent.com/Soopahfly/MisterFPGA
 bash /tmp/8BitDo_Controller_Selector.sh update --no-pause
 ```
 
-Run the second command only if the download succeeds. Internet access and
+Run the second command only if the download succeeds. This installs program files only; a first installation still needs the full installer to obtain the bundled profiles. Internet access and
 `curl` are required for online updates. There is no background update service.
 The repository retains a small compatibility bridge for old updaters. It is
 verified during downloads but not installed by the built-in updater.
@@ -143,18 +145,24 @@ The bundled helper is a static ARMv7 hard-float executable in `Scripts/.8bitdo-s
 
 ## Other cores and additional profiles
 
-Try the default layout first. If a core needs changes:
+Try the default layout first. [The core-mapping guide](docs/CORE-MAPPING.md) explains good next targets: Saturn, six-button Mega Drive, Neo Geo and PSX. These are configuration candidates; only N64 core maps are currently bundled.
+
+If a core needs changes:
 
 1. Apply the correct profile and reconnect the controller.
 2. Map its buttons inside that core and test them.
 3. Return to the selector and choose **Capture current maps into a profile**.
 4. Select the controller, then choose **Save current maps**. In the keyboard-only fallback, enter `n64`, `stadia`, `xbox` or `ps4` and confirm with `yes`.
 
+**Capture before applying another controller profile.** Applying replaces the active standard map set, including removal of core maps absent from the selected saved profile.
+
 Capture saves the active standard global/core v3 maps for the selected USB mode and backs up the previous profile. Make sure the correct profile is active before remapping, otherwise another controller's core maps could be captured with it. Capture does not change the active maps or the undo pointer.
 
 PS4 can be added when a pad is available for configuration and testing. Until then, selecting PS4 reports a missing profile and leaves active maps alone.
 
 For the main menu's SNES-style button prompts, Stadia/Xbox physical positions are: MiSTer B = physical A, A = B, Y = X, X = Y. Core-specific mappings are configured separately.
+
+Want to share your mappings? See [CONTRIBUTING.md](CONTRIBUTING.md) for files to submit, an issue/PR workflow and the test record. Core emulation settings such as PSX pad type or Mega Drive six-button mode are not included in these `.map` profiles.
 
 ## Backups and undo
 
@@ -178,6 +186,7 @@ bash /media/fat/Scripts/8BitDo_Controller_Selector.sh status
 bash /media/fat/Scripts/8BitDo_Controller_Selector.sh apply n64
 bash /media/fat/Scripts/8BitDo_Controller_Selector.sh capture n64 --yes
 bash /media/fat/Scripts/8BitDo_Controller_Selector.sh restore
+bash /media/fat/Scripts/8BitDo_Controller_Selector.sh update --no-pause
 ```
 
 When disconnected, specify the mode before the command:
@@ -193,8 +202,8 @@ An explicit mode conflicting with a single detected mode is rejected. If both id
 
 - Switch Scripts-menu operation and an Xbox-to-N64 profile switch were tested on MiSTer Multisystem 2 with v0.1.0.
 - All three XInput controllers were configured and tested on the same machine. Xbox rumble worked; N64-mod and Stadia tests did not produce rumble.
-- The v0.2.0 selector passes local file-operation tests for both modes, mode detection, offline menu choice, stale override removal, independent undo, capture, other-device and advanced-map preservation, missing/corrupt profiles, installer conflicts, locks and simulated failure rollback.
-- The updater passes local and mocked HTTPS tests for profile preservation, checksum/download rejection, commit pinning, repeat updates and rollback. Online downloading on MiSTer still needs testing.
+- Current selector checks cover both USB modes, detection, offline menus, stale override removal, independent undo, capture, preservation of other-device/advanced maps, missing/corrupt profiles, installer conflicts, locks and simulated failure rollback.
+- The built-in updater passes local/mocked HTTPS tests for profile preservation, checksum/download rejection, commit pinning, repeat updates, rollback and v0.3.1 migration. Real GitHub downloads and legacy-entry backup/removal were also checked on a development machine. Online downloading on MiSTer still needs testing.
 - Controller navigation passes native terminal and input-translation tests, but the bundled ARM helper and physical D-pad/Start operation still need testing on MiSTer. The updated selector still needs a hardware switching test. Portability to a second MiSTer, other cores and PS4 remain untested.
 
 Run the checks on a Linux computer with Bash, Python 3 and GCC (for the native navigation tests):
@@ -218,6 +227,7 @@ The default tools are `arm-linux-musleabihf-gcc` and `arm-linux-musleabihf-strip
 The bundled helper links musl 1.2.4 and GCC 13 runtime code. Their notices are in `src/licenses/`; build details are in `src/BUILD.md`.
 
 ## Planned improvements
+
 - A selection prompt when the receiver's gamepad input appears. Integration with MiSTer's display and input handling still needs investigation.
 - PS4 mappings, more core mappings and a second-MiSTer portability test.
 
