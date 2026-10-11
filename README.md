@@ -4,7 +4,7 @@ Choose the controller paired with an **8BitDo USB Wireless Adapter 2** and apply
 
 The receiver presents the same USB identity for different paired controllers within a USB output mode. MiSTer therefore shares their mapping filenames. This script asks you to choose the physical controller and installs its main-menu and core maps.
 
-**Version 0.2.0 supports XInput and Switch output modes.** It runs from MiSTer's Scripts menu or over SSH, using a keyboard. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing and controller-operated menus are still planned.
+**Version 0.3.0 adds controller navigation for XInput and Switch output modes.** Use the D-pad to move and Start to select, including capture and undo prompts. It detects the receiver's USB mode, not the paired controller. Automatic prompting on pairing is still planned.
 
 ## Included profiles and test results
 
@@ -32,7 +32,7 @@ The Xbox and Stadia XInput profiles use the layout shown below. Both triggers ar
 - MiSTer with Bash and its usual shell utilities.
 - An 8BitDo Adapter 2 presenting as `057e:2009` (Switch) or `2dc8:3106` (XInput).
 - Standard VID/PID mapping filenames. Per-port unique mapping configurations are not supported.
-- A keyboard for the menu, or an SSH connection.
+- A paired pad with a D-pad and Start button for controller navigation. A keyboard or SSH connection provides a fallback.
 
 Switch and XInput profiles use different input layouts. **Do not rename a Switch map to make it an XInput map.** Configure and capture each mode separately.
 
@@ -46,7 +46,7 @@ Switch and XInput profiles use different input layouts. **Do not rename a Switch
 bash install.sh
 ```
 
-The installer copies the selector into `/media/fat/Scripts/` and profiles into `/media/fat/config/8bitdo-profiles/`. It preserves active maps and backs up an existing different selector before replacing it. It checks all bundled profiles first and stops if an existing bundled map differs. Preserve or move the conflicting map before retrying; custom additional core maps are retained.
+The installer copies the selector and its bundled ARM helper into `/media/fat/Scripts/` and profiles into `/media/fat/config/8bitdo-profiles/`. It preserves active maps and backs up an existing different selector before replacing it. It checks all bundled profiles first and stops if an existing bundled map differs. Preserve or move the conflicting map before retrying; custom additional core maps are retained.
 
 Existing v0.1.0 Switch profiles stay in their original directories. XInput profiles are installed separately:
 
@@ -68,7 +68,7 @@ bash /media/fat/Scripts/8BitDo_Controller_Selector.sh
 ```
 
 2. The script detects the receiver's USB mode from its gamepad input. If disconnected or ambiguous, choose the mode matching the adapter's USB output.
-3. Choose **N64**, **Stadia** or **Xbox** with the keyboard, then press Enter.
+3. Use **D-pad up/down** to highlight **N64**, **Stadia** or **Xbox**, then press **Start**. Keyboard arrows and Enter also work. Choose Exit to cancel, or press Esc on the keyboard.
 4. Exit the script, turn the controller off and reconnect it. Press a button in the core to assign the player, if needed.
 
 You can also select a profile before pairing. Choosing a mode in this script selects saved mapping files; it does **not** change the adapter's hardware mode.
@@ -77,6 +77,16 @@ MiSTer caches loaded mappings. Re-pairing when changing controllers provides the
 
 The recorded **last selected** profile is a saved label for that USB mode. It does not identify the connected physical controller. The receiver's keyboard, mouse and Switch IMU interfaces are ignored during mode detection.
 
+## Controller navigation
+
+The menu reads the receiver's raw Linux input events. It does not depend on the MiSTer profile currently applied. Start is used for selection because the N64 mod and Xbox/Stadia face buttons have different raw layouts. Analogue sticks and face buttons do not navigate this version.
+
+You can use the working pad to open Scripts, select the next pad's profile, finish with Start, then turn the old pad off and pair the new one. You can also navigate with the newly paired pad even when its MiSTer mappings are wrong, provided you can open the script using a keyboard or SSH.
+
+The helper discovers the gamepad interface dynamically, ignores the receiver's keyboard/mouse and Switch IMU interfaces, and rechecks for a reconnected receiver. It temporarily grabs the gamepad while a menu is open to keep those presses out of MiSTer, and releases it on exit. A held Start button must be released and pressed again before accepting the next screen. An unavailable or busy gamepad leaves keyboard controls available.
+
+The bundled helper is a static ARMv7 hard-float executable in `Scripts/.8bitdo-selector/controller-menu`. No compiler, Python or extra packages are needed on MiSTer. Install the whole package to get it. If the helper is missing or cannot run, the selector falls back to its numbered keyboard menu. SSH arrow/Enter controls also work; a non-interactive/piped session retains the original numbered interface. `NAV_HELPER=/path/to/helper` overrides the helper for development.
+
 ## Other cores and additional profiles
 
 Try the default layout first. If a core needs changes:
@@ -84,7 +94,7 @@ Try the default layout first. If a core needs changes:
 1. Apply the correct profile and reconnect the controller.
 2. Map its buttons inside that core and test them.
 3. Return to the selector and choose **Capture current maps into a profile**.
-4. Enter `n64`, `stadia`, `xbox` or `ps4`, then confirm with `yes`.
+4. Select the controller, then choose **Save current maps**. In the keyboard-only fallback, enter `n64`, `stadia`, `xbox` or `ps4` and confirm with `yes`.
 
 Capture saves the active standard global/core v3 maps for the selected USB mode and backs up the previous profile. Make sure the correct profile is active before remapping, otherwise another controller's core maps could be captured with it. Capture does not change the active maps or the undo pointer.
 
@@ -130,19 +140,28 @@ An explicit mode conflicting with a single detected mode is rejected. If both id
 - Switch Scripts-menu operation and an Xbox-to-N64 profile switch were tested on MiSTer Multisystem 2 with v0.1.0.
 - All three XInput controllers were configured and tested on the same machine. Xbox rumble worked; N64-mod and Stadia tests did not produce rumble.
 - The v0.2.0 selector passes local file-operation tests for both modes, mode detection, offline menu choice, stale override removal, independent undo, capture, other-device and advanced-map preservation, missing/corrupt profiles, installer conflicts, locks and simulated failure rollback.
-- The updated selector still needs a hardware switching test. Portability to a second MiSTer, other cores and PS4 remain untested.
+- Controller navigation passes native terminal and input-translation tests, but the bundled ARM helper and physical D-pad/Start operation still need testing on MiSTer. The updated selector still needs a hardware switching test. Portability to a second MiSTer, other cores and PS4 remain untested.
 
-Run the checks on a computer with Bash and Python 3:
+Run the checks on a Linux computer with Bash, Python 3 and GCC (for the native navigation tests):
 
 ```bash
 python3 tests/test_selector.py
+python3 tests/test_navigation.py
 ```
 
 Tests use temporary directories and never write to a real MiSTer configuration.
 
-## Planned improvements
+To rebuild the bundled helper on a Linux development machine with an ARM hard-float musl cross toolchain (including Linux headers) installed:
 
-- Controller navigation for the selector menu.
+```bash
+bash src/build.sh
+```
+
+The default tools are `arm-linux-musleabihf-gcc` and `arm-linux-musleabihf-strip`; override them with `CC` and `STRIP`. `CPPFLAGS` can supply a Linux header path when building a musl wrapper toolchain. The build script updates the binary checksum checked by the installer. The helper source is in `src/controller-menu.c`.
+
+The bundled helper links musl 1.2.4 and GCC 13 runtime code. Their notices are in `src/licenses/`; build details are in `src/BUILD.md`.
+
+## Planned improvements
 - A selection prompt when the receiver's gamepad input appears. Integration with MiSTer's display and input handling still needs investigation.
 - PS4 mappings, more core mappings and a second-MiSTer portability test.
 

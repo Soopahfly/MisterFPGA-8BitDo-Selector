@@ -1,9 +1,10 @@
 #!/bin/bash
-# 8BitDo Controller Selector v0.2.0 for MiSTer
+# 8BitDo Controller Selector v0.3.0 for MiSTer
 # Install in /media/fat/Scripts/. Existing profiles live in
 # Switch profiles: config/8bitdo-profiles/{n64,stadia,xbox,ps4}/.
 # XInput profiles: config/8bitdo-profiles/xinput/{n64,stadia,xbox,ps4}/.
-# Keyboard: select a number, then Enter. Also works over SSH.
+# D-pad up/down and Start. Keyboard arrows/Enter, or numbered fallback.
+# Also works over SSH.
 # After APPLY/RESTORE, exit the script, turn the pad off, wait for its
 # input device to disappear, then reconnect. MiSTer caches loaded maps.
 # Scope: standard v3 maps for the selected USB mode. Other devices,
@@ -20,6 +21,13 @@ PROFILE_ROOT="$CONFIG_ROOT/8bitdo-profiles"
 LOCK="$PROFILE_ROOT/.selector-lock"
 MODE=${RECEIVER_MODE:-auto}
 INPUT_DEVICES=${INPUT_DEVICES:-/proc/bus/input/devices}
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+NAV_HELPER=${NAV_HELPER:-$SCRIPT_DIR/.8bitdo-selector/controller-menu}
+NAV_AVAILABLE=0
+# CLI and piped sessions retain the original keyboard/command interface.
+if [ -t 0 ] && [ -t 1 ] && [ -x "$NAV_HELPER" ] && "$NAV_HELPER" --check >/dev/null 2>&1; then
+    NAV_AVAILABLE=1
+fi
 WORK=
 ROLLBACK=
 TARGET=
@@ -178,7 +186,7 @@ restore_backup() {
 }
 status() {
     local p file
-    printf '8BitDo Controller Selector v0.2.0\nReceiver mode: %s (%s)\n' "$MODE" "${IDENTITY/_/:}"
+    printf '8BitDo Controller Selector v0.3.0\nReceiver mode: %s (%s)\n' "$MODE" "${IDENTITY/_/:}"
     printf 'Last selected by this script: '
     if [ -f "$STATE" ]; then cat "$STATE"; else printf 'unknown\n'; fi
     printf '(This is a record, not automatic controller detection.)\n\n'
@@ -195,7 +203,7 @@ status() {
         fi
     done
 }
-menu() {
+keyboard_menu() {
     local choice p answer
     status
     printf '\nUse the KEYBOARD: number then Enter.\n'
@@ -223,6 +231,46 @@ menu() {
     IFS= read -r answer || true
 }
 
+nav_pick() {
+    local result
+    result=$("$NAV_HELPER" "$@") || die 'Controller menu stopped. No selection applied.'
+    printf '%s' "$result"
+}
+menu() {
+    [ "$NAV_AVAILABLE" = 1 ] || { keyboard_menu; return; }
+    local choice p answer last=unknown name items=()
+    [ ! -f "$STATE" ] || last=$(cat "$STATE")
+    for p in n64 stadia xbox ps4; do
+        name=$(label "$p")
+        if [ -f "$PROFILES/$p/$GLOBAL" ]; then
+            items+=("$p|Select $name")
+        else
+            items+=("missing|$name (not captured)")
+        fi
+    done
+    choice=$(nav_pick '8BitDo Controller Selector v0.3.0' "$MODE | Last selected: $last" \
+        "${items[@]}" 'capture|Capture current maps' 'undo|Undo last switch' 'exit|Exit')
+    case "$choice" in
+        exit|cancel) return ;;
+        missing) printf 'That controller has no saved profile. Map it first, then capture it.\n'; return ;;
+        n64|stadia|xbox|ps4) apply_profile "$choice" ;;
+        undo)
+            answer=$(nav_pick 'Undo last switch?' "Restore the previous $MODE maps." 'cancel|Cancel' 'yes|Restore maps')
+            [ "$answer" = yes ] || return 0
+            restore_backup ;;
+        capture)
+            p=$(nav_pick 'Capture current maps' 'Which paired controller did you just map?' \
+                'cancel|Cancel' 'n64|N64 (8BitDo mod)' 'stadia|Stadia' 'xbox|Xbox' 'ps4|PS4')
+            [ "$p" != cancel ] || return 0
+            answer=$(nav_pick "Save maps as $(label "$p")?" "Replaces this saved $MODE profile. Its previous maps will be backed up." \
+                'cancel|Cancel' 'yes|Save current maps')
+            [ "$answer" = yes ] || return 0
+            capture_profile "$p" ;;
+        *) die 'Invalid controller menu selection.' ;;
+    esac
+    "$NAV_HELPER" --wait 'Finished' 'Exit, then reconnect the pad to reload maps if you applied or restored a profile.' 'exit|Exit' >/dev/null || true
+}
+
 detect_mode() {
     [ -r "$INPUT_DEVICES" ] || return 0
     awk 'BEGIN { RS="" }
@@ -241,10 +289,16 @@ configure_mode() {
             switch|xinput) MODE=$detected ;;
             *)
                 [ "${1:-menu}" = menu ] || die 'Receiver mode unavailable or ambiguous. Use --mode switch or --mode xinput.'
+                if [ "$NAV_AVAILABLE" = 1 ]; then
+                    answer=$(nav_pick 'Choose receiver USB mode' 'Chooses saved maps; does not change the adapter mode.' \
+                        '1|XInput (2dc8:3106)' '2|Switch (057e:2009)' '0|Exit')
+                    [ "$answer" != cancel ] || exit 0
+                else
                 printf 'Receiver mode unavailable or ambiguous. Choose the adapter USB output mode:\n'
                 printf 'This chooses saved maps; it does not change the adapter mode.\n'
                 printf '1  XInput (2dc8:3106)\n2  Switch (057e:2009)\n0  Exit\nMode: '
                 IFS= read -r answer || exit 0
+                fi
                 case "$answer" in 1) MODE=xinput ;; 2) MODE=switch ;; 0) exit 0 ;; *) die 'Invalid mode selection.' ;; esac ;;
         esac
     elif [ -n "$detected" ] && [ "$detected" != ambiguous ] && [ "$detected" != "$MODE" ]; then

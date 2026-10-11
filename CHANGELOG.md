@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.3.0 - 2026-10-11
+
+- D-pad up/down and Start navigation for profile selection, USB mode choice, capture, undo and finishing. Keyboard arrows/Enter/Esc remain available.
+- Bundled static ARMv7 helper reads raw receiver events independently of the active mapping, filters composite/IMU interfaces, temporarily grabs the gamepad, handles reconnects and suppresses held/repeated confirmation presses.
+- Original numbered keyboard menu remains the fallback when the helper cannot run or input is piped. CLI commands and mapping operations retain their existing behavior.
+- Installer checks the helper checksum and backs up an older helper. Added source, build script and native terminal/input tests.
+
+Controller navigation awaits testing with physical pads on MiSTer.
+
 ## 0.2.0 - 2026-10-10
 
 - Separate XInput (`2dc8:3106`) profiles for Xbox, N64 with 8BitDo mod and Stadia, each with captured global and N64 maps. Existing Switch profiles remain supported.

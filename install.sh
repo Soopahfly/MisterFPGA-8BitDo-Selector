@@ -4,6 +4,7 @@ set -eu
 SOURCE=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 DEST=${MISTER_ROOT:-/media/fat}
 SELECTOR=8BitDo_Controller_Selector.sh
+HELPER=Scripts/.8bitdo-selector/controller-menu
 PROFILES="$DEST/config/8bitdo-profiles"
 WORK=
 LOCK=
@@ -18,6 +19,15 @@ die() { printf 'ERROR: %s\n' "$*" >&2; exit 1; }
 
 [ -d "$DEST" ] || die "MiSTer root does not exist: $DEST"
 bash -n "$SOURCE/Scripts/$SELECTOR" || die 'Selector syntax check failed.'
+[ -f "$SOURCE/$HELPER" ] && [ ! -L "$SOURCE/$HELPER" ] || die 'Missing controller menu helper.'
+(cd "$SOURCE" && sha256sum -c src/controller-menu.sha256) || die 'Controller menu checksum failed.'
+[ ! -L "$DEST/Scripts/.8bitdo-selector" ] || die 'Helper directory must not be a symlink.'
+if [ -e "$DEST/Scripts/.8bitdo-selector" ]; then
+    [ -d "$DEST/Scripts/.8bitdo-selector" ] || die 'Helper path is not a directory.'
+fi
+if [ -e "$DEST/$HELPER" ]; then
+    [ -f "$DEST/$HELPER" ] && [ ! -L "$DEST/$HELPER" ] || die 'Existing controller helper is not a regular file.'
+fi
 
 # Check every source and existing profile before changing files.
 for p in n64 stadia xbox xinput/n64 xinput/stadia xinput/xbox; do
@@ -45,6 +55,13 @@ LOCK="$PROFILES/.selector-lock"
 WORK=$(mktemp -d "$PROFILES/.install-XXXXXX")
 cp "$SOURCE/Scripts/$SELECTOR" "$WORK/$SELECTOR"
 chmod +x "$WORK/$SELECTOR"
+cp "$SOURCE/$HELPER" "$WORK/controller-menu"
+chmod +x "$WORK/controller-menu"
+if [ -f "$DEST/$HELPER" ] && ! cmp -s "$SOURCE/$HELPER" "$DEST/$HELPER"; then
+    helper_backup=$(mktemp -d "$PROFILES/helper-backup-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+    cp -p "$DEST/$HELPER" "$helper_backup/"
+    printf 'Previous controller helper backed up: %s\n' "$helper_backup"
+fi
 if [ -e "$DEST/Scripts/$SELECTOR" ]; then
     [ -f "$DEST/Scripts/$SELECTOR" ] && [ ! -L "$DEST/Scripts/$SELECTOR" ] || die 'Existing selector is not a regular file.'
     if ! cmp -s "$SOURCE/Scripts/$SELECTOR" "$DEST/Scripts/$SELECTOR"; then
@@ -65,6 +82,8 @@ for p in n64 stadia xbox xinput/n64 xinput/stadia xinput/xbox; do
         fi
     done
 done
+mkdir -p "$DEST/Scripts/.8bitdo-selector"
+mv "$WORK/controller-menu" "$DEST/$HELPER"
 mv "$WORK/$SELECTOR" "$DEST/Scripts/$SELECTOR"
 sync
 printf 'Installed Switch and XInput profiles for N64, Stadia and Xbox. Active maps are unchanged.\n'
